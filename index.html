@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#111827" />
+  <title>TTS 3D RPG</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1020;font-family:system-ui,sans-serif;touch-action:none}#game{position:fixed;inset:0}canvas{display:block;width:100%;height:100%}.hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;color:#fff}.panel{background:rgba(15,23,42,.78);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;min-width:170px}.bar{height:8px;background:#334155;border-radius:99px;overflow:hidden;margin-top:6px}.hp{height:100%;width:100%;background:#ef4444}.controls{position:fixed;inset:auto 0 18px 0;display:flex;justify-content:space-between;align-items:end;padding:0 18px}.joystick{width:118px;height:118px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);position:relative}.stick{position:absolute;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.3);left:32px;top:32px}.actions{display:flex;gap:12px}.btn{width:68px;height:68px;border:0;border-radius:50%;background:rgba(255,255,255,.15);color:white;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,.22)}.attack{background:rgba(239,68,68,.65)}#message{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:28px;font-weight:800;text-shadow:0 3px 12px #000;opacity:0;transition:.2s;pointer-events:none}.hint{font-size:11px;opacity:.7;margin-top:4px}
+  </style>
+</head>
+<body>
+<div id="game"></div>
+<div class="hud"><div class="panel"><b>⚔️ TTS 3D RPG</b><div>Lv. 1 Hero</div><div class="bar"><div id="hp" class="hp"></div></div><div class="hint">HP 100 / 100</div></div><div class="panel" style="min-width:auto;text-align:right"><b id="enemyName">Slime</b><div id="enemyHpText">HP 100</div></div></div>
+<div id="message">CRITICAL!</div>
+<div class="controls"><div id="joystick" class="joystick"><div id="stick" class="stick"></div></div><div class="actions"><button class="btn" id="skill">SKILL</button><button class="btn attack" id="attack">ATTACK</button></div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js';
+
+const root=document.querySelector('#game');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x8fd3ff); scene.fog=new THREE.Fog(0x8fd3ff,18,45);
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,100); camera.position.set(0,7,10);
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true; root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x527a52,2.2)); const sun=new THREE.DirectionalLight(0xffffff,2.2); sun.position.set(6,12,5); sun.castShadow=true; scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(70,70),new THREE.MeshStandardMaterial({color:0x5ca85c,roughness:1})); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+for(let i=0;i<24;i++){const t=new THREE.Mesh(new THREE.ConeGeometry(.5+Math.random()*.5,1.5+Math.random()*2,7),new THREE.MeshStandardMaterial({color:0x2f7d3b}));t.position.set((Math.random()-.5)*35,1,(Math.random()-.5)*35);t.castShadow=true;scene.add(t)}
+function hero(){const g=new THREE.Group(); const body=new THREE.Mesh(new THREE.CapsuleGeometry(.45,.8,5,10),new THREE.MeshStandardMaterial({color:0x4f7cff}));body.position.y=1;body.castShadow=true;g.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.38,16,12),new THREE.MeshStandardMaterial({color:0xffd1a9}));head.position.y=1.95;head.castShadow=true;g.add(head);const sword=new THREE.Mesh(new THREE.BoxGeometry(.12,.9,.08),new THREE.MeshStandardMaterial({color:0xe5e7eb,metalness:.7,roughness:.2}));sword.position.set(.65,1.25,0);sword.rotation.z=-.55;g.add(sword);return g}
+const player=hero(); scene.add(player);
+const enemy=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),new THREE.MeshStandardMaterial({color:0x65e6a2}));enemy.scale.y=.7;enemy.position.set(0,.7,-7);enemy.castShadow=true;scene.add(enemy);
+let enemyHP=100, playerHP=100, moveX=0,moveZ=0, attackLock=false;
+const hp=document.querySelector('#hp'), enemyHpText=document.querySelector('#enemyHpText'), message=document.querySelector('#message');
+function pop(text){message.textContent=text;message.style.opacity=1;setTimeout(()=>message.style.opacity=0,500)}
+function attack(mult=1){if(attackLock||enemyHP<=0)return;attackLock=true;player.rotation.y=Math.PI;const dmg=Math.floor((15+Math.random()*10)*mult);enemyHP=Math.max(0,enemyHP-dmg);enemyHpText.textContent='HP '+enemyHP;pop((mult>1?'SKILL ':'')+'-'+dmg);enemy.scale.setScalar(1.18);setTimeout(()=>{enemy.scale.setScalar(1);attackLock=false},180);if(enemyHP===0){pop('VICTORY!');setTimeout(()=>{enemyHP=100;enemyHpText.textContent='HP 100'},1200)}}
+document.querySelector('#attack').onclick=()=>attack(1);document.querySelector('#skill').onclick=()=>attack(2);
+const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');
+function joyMove(e){const r=joy.getBoundingClientRect(),p=e.touches?e.touches[0]:e,x=p.clientX-r.left-r.width/2,y=p.clientY-r.top-r.height/2,max=40,len=Math.hypot(x,y),k=Math.min(1,max/Math.max(len,1));const nx=x*k,ny=y*k;stick.style.transform=`translate(${nx}px,${ny}px)`;moveX=nx/max;moveZ=ny/max}
+function joyEnd(){stick.style.transform='';moveX=moveZ=0}joy.addEventListener('touchstart',e=>{e.preventDefault();joyMove(e)},{passive:false});joy.addEventListener('touchmove',e=>{e.preventDefault();joyMove(e)},{passive:false});joy.addEventListener('touchend',joyEnd);
+addEventListener('keydown',e=>{if(e.key==='w')moveZ=-1;if(e.key==='s')moveZ=1;if(e.key==='a')moveX=-1;if(e.key==='d')moveX=1;if(e.code==='Space')attack()});addEventListener('keyup',e=>{if('wasd'.includes(e.key))moveX=moveZ=0});
+const clock=new THREE.Clock();
+function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);player.position.x+=moveX*4*dt;player.position.z+=moveZ*4*dt;player.position.x=THREE.MathUtils.clamp(player.position.x,-14,14);player.position.z=THREE.MathUtils.clamp(player.position.z,-14,14);if(Math.abs(moveX)+Math.abs(moveZ)>.05)player.rotation.y=Math.atan2(moveX,moveZ);enemy.rotation.y+=dt;camera.position.lerp(new THREE.Vector3(player.position.x,7,player.position.z+10),.08);camera.lookAt(player.position.x,1,player.position.z-3);renderer.render(scene,camera)}loop();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
